@@ -1,4 +1,4 @@
-# KingCounty_Smoker_SmallAreaEstimation
+# Smoking Prevalnce in King County (Small Area Estimation)
 **Estimating Smoker Prevalence in King County Areas**
 
 By: Walker Azam
