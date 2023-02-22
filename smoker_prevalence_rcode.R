@@ -121,3 +121,119 @@ mapPlot(
   labels = c("Smoothed Posterior Standard Deviations"), by.data = "region", by.geo = "HRA2010v2_", legend.label = 'Standard Deviation'
 )
 
+
+## Question 5: Comparing Naive and Smoothed Binomial Estimates
+
+# merging naive and smoothed results
+merged2 <-  merge(naive_df, smoothed_bym2$smooth, by = 'region')
+# plotting...
+ggplot(merged2, aes(x = HT.est, y = median)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  ggtitle("Naive vs. Smoothed Estimates") +
+  xlab("Naive Estimates") +
+  ylab("Smoothed Estimates") +
+  theme(plot.title = element_text(hjust = 0.5)) + xlim(0, 0.25) + ylim(0, 0.25)
+# using square root of variance
+merged2$smoothed_se <- sqrt(merged2$var)
+# plotting
+ggplot(merged2, aes(x = naive_se, y = smoothed_se)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  ggtitle("Naive vs. Smoothed Standard Errors") +
+  xlab("Naive SE") +
+  ylab("Smoothed SE") +
+  theme(plot.title = element_text(hjust = 0.5)) + xlim(0, 0.04) + ylim(0, 0.04)
+
+## Question 6: Smoothed Weighted Estimations
+
+# Specifying Amat = mat to allow for BYM2 random effects
+FHmodel <- smoothSurvey(
+  data = BRFSS, geo = KingCounty, Amat = mat, responseType = "binary", 
+  responseVar = "smoker1", strataVar = "strata", weightVar = "rwt_llcp",
+  regionVar = "hracode", clusterVar = "~1", CI = 0.95
+)
+# extracting posterior medians: FHmodel$smooth$median
+mapPlot(
+  data = FHmodel$smooth, geo = KingCounty,
+  variables = c("median"),
+  labels = c("Smoothed Weighted Posterior Medians"), by.data = "region", by.geo = "HRA2010v2_", legend.label = 'Posterior Medians'
+)
+# getting standard deviation by taking the sqrt of variance
+FHmodel$smooth$std <- sqrt(FHmodel$smooth$var)
+# plotting...
+mapPlot(
+  data = FHmodel$smooth, geo = KingCounty,
+  variables = c("std"),
+  labels = c("Smoothed Weighted Standard Deviations"), by.data = "region", by.geo = "HRA2010v2_", legend.label = 'Standard Deviation'
+)
+
+## Question 7: Comparing Weighted and Smoothed Weighted Estimates
+
+merged3 <-  merge(direct, FHmodel$smooth, by.x = c('hracode'), by.y = c('region') )
+ggplot(merged3, aes(x = smoker1, y = median)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  ggtitle("Weighted vs. Smoothed Weighted Estimates") +
+  xlab("Weighted Estimates") +
+  ylab("Smoothed Weighted Estimates") +
+  theme(plot.title = element_text(hjust = 0.5)) + xlim(0, 0.35) + ylim(0, 0.35)
+
+merged3$std <- sqrt(FHmodel$smooth$var)
+ggplot(merged3, aes(x = se, y = std)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  ggtitle("Weighted vs. Smoothed Weighted Standard Errors") +
+  xlab("Weighted SE") +
+  ylab("Smoothed Weighted SE") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlim(0, 0.09) + ylim(0, 0.09)
+
+## Question 8: Summarize the HRA variation in smoking prevalence across King County
+
+library(gridExtra)
+## plot of all maps
+p1 <-  mapPlot(
+  data = naive_df, geo = KingCounty,
+  variables = c("HT.est"),
+  labels = c("Naive Direct Estimates"), by.data = "region", by.geo = "HRA2010v2_", legend.label="Estimate Value"
+)
+p2 <- mapPlot(
+  data = direct, geo = KingCounty,
+  variables = c("smoker1"),
+  labels = c("Weighted Estimates"), by.data = "hracode", by.geo = "HRA2010v2_", legend.label = "Weighted Estimates"
+)
+p3 <- mapPlot(
+  data = smoothed_bym2$smooth, geo = KingCounty,
+  variables = c("median"),
+  labels = c("Smoothed Posterior Medians"), by.data = "region", by.geo = "HRA2010v2_", legend.label = 'Posterior Medians'
+)
+p4 <- mapPlot(
+  data = FHmodel$smooth, geo = KingCounty,
+  variables = c("median"),
+  labels = c("Smoothed Weighted Posterior Medians"), by.data = "region", by.geo = "HRA2010v2_", legend.label = 'Posterior Medians'
+)
+grid.arrange(grobs = list(p1, p2, p3, p4), ncol = 2)
+
+# plot of all errors
+e1 <-  mapPlot(
+  data = naive_df, geo = KingCounty,
+  variables = c("naive_se"),
+  labels = c("Naive Standard Errors"), by.data = "region", by.geo = "HRA2010v2_", legend.label="Error Value"
+)
+e2 <- mapPlot(
+  data = direct, geo = KingCounty,
+  variables = c("se"),
+  labels = c("Weighted Standard Errors"), by.data = "hracode", by.geo = "HRA2010v2_", legend.label = "Error Value"
+)
+e3 <- mapPlot(
+  data = smoothed_bym2$smooth, geo = KingCounty,
+  variables = c("std"),
+  labels = c("Smoothed Posterior Standard Deviation"), by.data = "region", by.geo = "HRA2010v2_", legend.label = 'Error Value'
+)
+e4 <- mapPlot(
+  data = FHmodel$smooth, geo = KingCounty,
+  variables = c("std"),
+  labels = c("Smoothed Weighted Posterior Standard Deviations"), by.data = "region", by.geo = "HRA2010v2_", legend.label = 'Error Value'
+)
+grid.arrange(grobs = list(e1, e2, e3, e4), ncol = 2)
